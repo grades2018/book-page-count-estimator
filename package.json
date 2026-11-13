@@ -1,0 +1,8 @@
+{
+  "name": "book-page-count-estimator",
+  "version": "1.0.0",
+  "description": "Estimate paperback page count, KDP spine width and full cover size from a word count.",
+  "private": true,
+  "license": "MIT",
+  "scripts": { "test": "node --test test/calc.test.js" }
+}

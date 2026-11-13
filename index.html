@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book Page Count and KDP Spine Estimator</title>
+<meta name="description" content="Free browser tool: estimate paperback page count from word count, then KDP spine width and full cover wrap size by trim and paper.">
+<style>
+  :root { --ink:#1d1d1f; --muted:#5f6368; --line:#e3e3e6; --accent:#7a3cff; --bg:#fbfaf7; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:880px; margin:0 auto; padding:28px 18px 48px; }
+  h1 { font-size:1.7rem; margin:0 0 6px; }
+  p.lead { color:var(--muted); margin:0 0 22px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  label { display:block; font-weight:600; font-size:.92rem; margin-bottom:4px; }
+  input, select, textarea { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff; }
+  textarea { min-height:90px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-top:18px; }
+  .results { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+  .stat { border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat b { display:block; font-size:1.5rem; }
+  .stat span { color:var(--muted); font-size:.88rem; }
+  ul.warn { color:#a03a00; margin:12px 0 0; padding-left:20px; }
+  small, .note { color:var(--muted); font-size:.86rem; }
+  .cta { background:#f4efff; border-color:#dccdfd; }
+  a { color:var(--accent); }
+  button { padding:8px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; font:inherit; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Book Page Count and KDP Spine Estimator</h1>
+  <p class="lead">Turn a word count into an estimated paperback page count, then get the KDP spine width and full cover wrap size. Runs in your browser, nothing is uploaded.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div><label for="words">Word count</label><input id="words" inputmode="numeric" value="60000"></div>
+      <div><label for="trim">Trim size (inches)</label><select id="trim"></select></div>
+      <div><label for="paper">Ink and paper</label><select id="paper"></select></div>
+      <div><label for="density">Layout density</label>
+        <select id="density"><option value="airy">Airy (larger font, wide margins)</option><option value="standard" selected>Standard</option><option value="dense">Dense (smaller font, tight margins)</option></select></div>
+      <div><label for="chapters">Number of chapters</label><input id="chapters" inputmode="numeric" value="20"></div>
+      <div><label for="front">Front matter pages</label><input id="front" inputmode="numeric" value="6"></div>
+      <div><label for="back">Back matter pages</label><input id="back" inputmode="numeric" value="2"></div>
+      <div><label for="wpp">Words per page (optional override)</label><input id="wpp" inputmode="numeric" placeholder="auto"></div>
+    </div>
+    <details style="margin-top:14px"><summary>Or paste text to count words</summary>
+      <textarea id="paste" placeholder="Paste a chapter or the whole manuscript"></textarea>
+      <button id="usePaste" type="button">Use this word count</button> <small id="pasteCount"></small>
+    </details>
+  </div>
+
+  <div class="card" aria-live="polite">
+    <div class="results">
+      <div class="stat"><b id="rPages">-</b><span>estimated pages (even)</span></div>
+      <div class="stat"><b id="rSpine">-</b><span>spine width</span></div>
+      <div class="stat"><b id="rCover">-</b><span>full cover wrap with 0.125 in bleed</span></div>
+      <div class="stat"><b id="rWpp">-</b><span>words per page used</span></div>
+    </div>
+    <ul class="warn" id="warn"></ul>
+    <p class="note" id="spineText"></p>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-top:0">How it works</h2>
+    <p class="note">Pages = words / words per page, plus about half a page per chapter opening, plus front and back matter, rounded up to an even number. Words per page are rough rules of thumb for an 11 pt serif body and differ by font, leading and margins, so check the final page count in your formatted PDF. Spine width uses the per-page paper thickness from the <a href="https://kdp.amazon.com/en_US/help/topic/G201857950">KDP Paperback Submission Guidelines</a> (white 0.002252 in, cream 0.0025 in, premium color 0.002347 in, standard color 0.002252 in). Maximum page counts also depend on trim size, so this tool uses the widest limit per paper. Always confirm with the official KDP cover calculator before you upload.</p>
+  </div>
+
+  <div class="card cta">
+    <p style="margin:0"><b>Still need the manuscript?</b> <a href="https://www.imagineyourbook.com/">ImagineYourBook</a> plans and drafts a complete book from your idea (text with a designed cover, Word and EPUB export). $0 7-day trial with a card, then $24.99/month unless you cancel. <small>This free tool is made by the ImagineYourBook team.</small></p>
+  </div>
+  <p class="note">Open source on <a href="https://github.com/grades2018/book-page-count-estimator">GitHub</a>. MIT license. Not affiliated with Amazon KDP.</p>
+</main>
+<script src="calc.js"></script>
+<script>
+(function () {
+  var E = window.BookEstimator, $ = function (id) { return document.getElementById(id); };
+  Object.keys(E.TRIMS).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = k.replace("x", " x "); if (k === "6x9") o.selected = true; $("trim").appendChild(o); });
+  Object.keys(E.PAPERS).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = E.PAPERS[k].label; $("paper").appendChild(o); });
+  function update() {
+    var r = E.estimate({ words: $("words").value, trim: $("trim").value, paper: $("paper").value, density: $("density").value,
+      chapters: $("chapters").value, frontMatter: $("front").value, backMatter: $("back").value, wordsPerPage: $("wpp").value });
+    $("rPages").textContent = r.pages;
+    $("rSpine").textContent = r.spine.inches + " in / " + r.spine.mm + " mm";
+    $("rCover").textContent = r.cover.widthIn + " x " + r.cover.heightIn + " in";
+    $("rWpp").textContent = r.wordsPerPage;
+    $("warn").innerHTML = "";
+    r.warnings.forEach(function (w) { var li = document.createElement("li"); li.textContent = w; $("warn").appendChild(li); });
+    $("spineText").textContent = "Cover in mm: " + r.cover.widthMm + " x " + r.cover.heightMm + ". Spine text " + (r.spineText ? "allowed (80+ pages)." : "not allowed under 80 pages.");
+  }
+  ["words","trim","paper","density","chapters","front","back","wpp"].forEach(function (id) { $(id).addEventListener("input", update); $(id).addEventListener("change", update); });
+  $("paste").addEventListener("input", function () { $("pasteCount").textContent = E.countWords($("paste").value) + " words"; });
+  $("usePaste").addEventListener("click", function () { $("words").value = E.countWords($("paste").value); update(); });
+  update();
+})();
+</script>
+</body>
+</html>
